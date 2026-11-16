@@ -1,14 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Snapshot } from "@/lib/solana";
 
 const EXAMPLES = [
   { label: "Solana Vote Program", address: "Vote111111111111111111111111111111111111111" },
-  { label: "USDC Mint", address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" },
+  { label: "Raydium Authority V4", address: "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8" },
 ];
 
 function fmt(n: number, digits = 4): string {
+  // A non-zero amount that rounds to 0 at this precision shows as "<0.0001",
+  // not "0" — otherwise a 1-lamport balance looks like an empty account.
+  if (n > 0 && Number(n.toFixed(digits)) === 0) {
+    return `<${(10 ** -digits).toFixed(digits)}`;
+  }
   return n.toLocaleString("en-US", {
     minimumFractionDigits: 0,
     maximumFractionDigits: digits,
@@ -24,8 +29,12 @@ export default function Home() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const requestSeq = useRef(0);
 
   async function lookup(target: string) {
+    // Guard against out-of-order responses: a slow earlier lookup must not
+    // overwrite the result of a newer one.
+    const seq = ++requestSeq.current;
     setLoading(true);
     setError(null);
     setSnapshot(null);
@@ -34,15 +43,18 @@ export default function Home() {
         `/api/snapshot?address=${encodeURIComponent(target.trim())}`,
       );
       const data = await res.json();
+      if (seq !== requestSeq.current) return;
       if (!res.ok) {
         setError(data.error ?? "Something went wrong.");
       } else {
         setSnapshot(data as Snapshot);
       }
     } catch {
-      setError("Network error — could not reach the server. Try again.");
+      if (seq === requestSeq.current) {
+        setError("Network error — could not reach the server. Try again.");
+      }
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
   }
 
@@ -93,7 +105,11 @@ export default function Home() {
         ))}
       </div>
 
-      {error && <div className="error">{error}</div>}
+      {error && (
+        <div className="error" role="alert">
+          {error}
+        </div>
+      )}
 
       {snapshot && (
         <>

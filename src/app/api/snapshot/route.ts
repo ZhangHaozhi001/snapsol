@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         error:
-          "Could not reach the Solana network just now. The public RPC can be rate-limited — wait a few seconds and try again.",
+          "Could not reach the Solana network just now. It may be rate-limited or temporarily down — wait a few seconds and try again.",
       },
       { status: 502 },
     );
