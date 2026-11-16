@@ -70,3 +70,9 @@ during a recheck.
   Token USD pricing is MVP work, and Panel 2 says so in the UI.
 - Public RPC is rate-limited; an optional `HELIUS_API_KEY` env var switches
   to Helius automatically (see `.env.example`).
+
+## Live deployment (2026-11-16)
+- URL: https://snapsol.vercel.app (Vercel, project snapsol)
+- First deploy recheck FAILED: /api/snapshot returned 500 (ERR_REQUIRE_ESM from @solana/web3.js → rpc-websockets → uuid on Vercel serverless runtime); invalid address also 500.
+- Fix (commit abb6937): removed @solana/web3.js from the server path; src/lib/solana.ts now uses plain fetch JSON-RPC (getBalance + getTokenAccountsByOwner jsonParsed for SPL and Token-2022), in-file base58 validation, no new dependencies.
+- Post-fix live recheck (2026-11-16 12:05 CST): homepage 200 (1.9s); valid Raydium Authority V4 → 200, solBalance 6.395493637, SOL $71.87, value $459.64, tokens returned; invalid address → 400; empty address → 400.
